@@ -1,0 +1,18 @@
+[package]
+name = "k2_firmware"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+# Runtime and device
+panic-probe = { version = "0.3", features = ["print-defmt"] }
+cortex-m = "0.7.3"
+cortex-m-rt = "0.7.0"
+rtt-target = { version = "0.3.1", features = ["cortex-m"] }
+nrf52840-hal = { version = "0.15.1", features = ["rt"] }
+
+# Logging
+defmt = "0.3"
+defmt-rtt = "0.3"
