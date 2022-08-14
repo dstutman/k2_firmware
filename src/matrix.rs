@@ -32,11 +32,11 @@ impl<const R: usize, const C: usize> MatrixState<R, C> {
     }
 
     /// Checks if an entry is marked
-    pub fn get(&mut self, r: usize, c: usize) -> bool {
+    pub fn get(&self, r: usize, c: usize) -> bool {
         self.state[r][c]
     }
 
-    pub fn any(&mut self) -> bool {
+    pub fn any(&self) -> bool {
         self.state.flatten().contains(&true)
     }
 }
@@ -75,7 +75,7 @@ impl<const R: usize, const C: usize> MatrixSupervisor<R, C> {
     pub fn service(self) -> Self {
         match self.state {
             SupervisorState::Active { mut rows, columns } => {
-                defmt::debug!("LPMS Mode: Active");
+                defmt::debug!("matrix supervisor: active");
                 let mut matrix: MatrixState<R, C> = MatrixState::new();
 
                 for pin in rows.iter_mut() {
@@ -119,7 +119,7 @@ impl<const R: usize, const C: usize> MatrixSupervisor<R, C> {
             }
             // We have been woken from a passive state. Go active and service immediately.
             SupervisorState::Passive { rows, columns } => {
-                defmt::debug!("LPMS Mode: Passive");
+                defmt::debug!("matrix supervisor: passive");
                 Self {
                     state: SupervisorState::Active { rows, columns },
                     ..self
@@ -128,7 +128,7 @@ impl<const R: usize, const C: usize> MatrixSupervisor<R, C> {
             }
             // We have been dormant for a cycle, so now we go active.
             SupervisorState::Dormant { rows, columns } => {
-                defmt::debug!("LPMS Mode: Dormant");
+                defmt::debug!("matrix supervisor: dormant");
                 Self {
                     state: SupervisorState::Active {
                         rows: rows.map(|p| p.into_push_pull_output(Level::High)),
