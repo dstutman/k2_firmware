@@ -1,6 +1,9 @@
 #![no_std]
 #![no_main]
 #![feature(slice_flatten)]
+// Hopefully just using multiplication wont cause major issues.
+#![allow(incomplete_features)]
+#![feature(generic_const_exprs)]
 
 use defmt_rtt as _; // global logger
 use panic_probe as _;
@@ -10,6 +13,9 @@ use nrf52840_hal as hal;
 
 mod matrix;
 use matrix::MatrixSupervisor;
+
+mod event_mapper;
+use event_mapper::{Event, Mapper, SimpleKey};
 
 #[cortex_m_rt::entry]
 fn main() -> ! {
@@ -51,6 +57,46 @@ fn main() -> ! {
         ],
     );
 
+    let mut k00 = SimpleKey::<0>::Waiting;
+    let mut k01 = SimpleKey::<1>::Waiting;
+    let mut k02 = SimpleKey::<2>::Waiting;
+    let mut k03 = SimpleKey::<3>::Waiting;
+    let mut k04 = SimpleKey::<4>::Waiting;
+    let mut k10 = SimpleKey::<5>::Waiting;
+    let mut k11 = SimpleKey::<6>::Waiting;
+    let mut k12 = SimpleKey::<7>::Waiting;
+    let mut k13 = SimpleKey::<8>::Waiting;
+    let mut k14 = SimpleKey::<9>::Waiting;
+    let mut k20 = SimpleKey::<10>::Waiting;
+    let mut k21 = SimpleKey::<11>::Waiting;
+    let mut k22 = SimpleKey::<12>::Waiting;
+    let mut k23 = SimpleKey::<13>::Waiting;
+    let mut k24 = SimpleKey::<14>::Waiting;
+    let mut k30 = SimpleKey::<15>::Waiting;
+    let mut k31 = SimpleKey::<16>::Waiting;
+    let mut k32 = SimpleKey::<17>::Waiting;
+    let mut k33 = SimpleKey::<18>::Waiting;
+    let mut k34 = SimpleKey::<19>::Waiting;
+    let mut k40 = SimpleKey::<20>::Waiting;
+    let mut k41 = SimpleKey::<21>::Waiting;
+    let mut k42 = SimpleKey::<22>::Waiting;
+    let mut k43 = SimpleKey::<23>::Waiting;
+    let mut k44 = SimpleKey::<24>::Waiting;
+    let mut k50 = SimpleKey::<25>::Waiting;
+    let mut k51 = SimpleKey::<26>::Waiting;
+    let mut k52 = SimpleKey::<27>::Waiting;
+    let mut k53 = SimpleKey::<28>::Waiting;
+    let mut k54 = SimpleKey::<29>::Waiting;
+
+    let mut mapper = Mapper::new([
+        [&mut k00, &mut k01, &mut k02, &mut k03, &mut k04],
+        [&mut k10, &mut k11, &mut k12, &mut k13, &mut k14],
+        [&mut k20, &mut k21, &mut k22, &mut k23, &mut k24],
+        [&mut k30, &mut k31, &mut k32, &mut k33, &mut k34],
+        [&mut k40, &mut k41, &mut k42, &mut k43, &mut k44],
+        [&mut k50, &mut k51, &mut k52, &mut k53, &mut k54],
+    ]);
+
     let mut blue_led = gpio0
         .p0_04
         .into_push_pull_output(hal::gpio::Level::Low)
@@ -65,11 +111,19 @@ fn main() -> ! {
             // unwrap: infallible
             blue_led.set_low().unwrap();
         }
-        for j in 0..5 {
-            for i in 0..6 {
-                if supervisor.matrix.get(i, j) {
-                    defmt::info!("Key depressed ({}, {})", i, j);
-                }
+
+        let events = mapper.step(&supervisor.matrix);
+
+        for maybe_event in events {
+            if let Some(event) = maybe_event {
+                match event {
+                    Event::KeyDown { key } => {
+                        defmt::info!("Key down: {}", key);
+                    }
+                    Event::KeyUp { key } => {
+                        defmt::info!("Key up: {}", key);
+                    }
+                };
             }
         }
     }
