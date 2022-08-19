@@ -1,5 +1,7 @@
+use core::future::Future;
+
 /// TODO: Debouncing
-use crate::matrix::MatrixState;
+use crate::matrix::KeyState;
 #[derive(Clone, Copy)]
 pub enum Event {
     KeyUp { key: usize },
@@ -7,7 +9,7 @@ pub enum Event {
 }
 
 pub trait Detector {
-    fn step(&mut self, key_state: bool) -> Option<Event>;
+    fn step(&mut self, state: KeyState) -> Option<Event>;
 }
 
 pub enum SimpleKey<const ID: usize> {
@@ -16,10 +18,10 @@ pub enum SimpleKey<const ID: usize> {
 }
 
 impl<const ID: usize> Detector for SimpleKey<ID> {
-    fn step(&mut self, key_state: bool) -> Option<Event> {
+    fn step(&mut self, state: KeyState) -> Option<Event> {
         match self {
             SimpleKey::Waiting => {
-                if key_state {
+                if state == KeyState::Down {
                     *self = SimpleKey::Triggered;
                     Some(Event::KeyDown { key: ID })
                 } else {
@@ -27,7 +29,7 @@ impl<const ID: usize> Detector for SimpleKey<ID> {
                 }
             }
             SimpleKey::Triggered => {
-                if !key_state {
+                if state == KeyState::Up {
                     *self = SimpleKey::Waiting;
                     Some(Event::KeyUp { key: ID })
                 } else {
@@ -48,13 +50,21 @@ impl<'a, const R: usize, const C: usize> Mapper<'a, R, C> {
     }
 
     /// Only one event per key may occur during a step.
-    pub fn step(&mut self, matrix_state: &MatrixState<R, C>) -> [Option<Event>; R * C] {
+    pub fn step(&mut self, matrix_state: &[[KeyState; C]; R]) -> [Option<Event>; R * C] {
         let mut events = [None; R * C];
         for r in 0..R {
             for c in 0..C {
-                events[r * C + c] = self.machines[r][c].step(matrix_state.get(r, c));
+                events[r * C + c] = self.machines[r][c].step(matrix_state[r][c]);
             }
         }
         events
     }
+}
+
+pub trait EventSignaler {
+    fn event(&mut self) -> &dyn Future<Output = ()>;
+}
+
+pub trait DeltaTimer {
+    fn wait(&mut self, dt: usize) -> &dyn Future<Output = ()>;
 }
